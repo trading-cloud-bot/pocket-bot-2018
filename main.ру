@@ -189,4 +189,3 @@ def handle_timeframe_choice(call):
 
 if __name__ == "__main__":
     bot.infinity_polling()
-
