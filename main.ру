@@ -9,8 +9,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 # === ASSETS CATALOG ===
 CATEGORIES = {
-    "CURRENCY": {
-        "EURUSDT": "EURUSDT", "GBPUSDT": "GBPUSDT", "USDCUSDT": "USDCUSDT"
+    "CURRENCY": {,"EURUSDT": "EURUSDT", "GBPUSDT": "GBPUSDT", "USDCUSDT": "USDCUSDT"
     },
     "COMMODITIES": {
         "Gold (PAXG/USDT)": "PAXGUSDT"
