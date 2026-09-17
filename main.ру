@@ -10,7 +10,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 # === КАТАЛОГ АКТИВОВ ===
 CATEGORIES = {
     "💱 6 ТОП ВАЛЮТНЫХ ПАР": {
-        "EUR/USDT": "EURUSDT", "GBP/USDT": "GBPUSDT", "USDC/USDT": "USDCUSDT"
+        "EURUSDT": "EURUSDT", "GBPUSDT": "GBPUSDT", "USDCUSDT": "USDCUSDT"
     },
     "🪙 ЗОЛОТО И СЫРЬЕ": {
         "Золото (PAXG/USDT)": "PAXGUSDT"
@@ -46,7 +46,7 @@ for tf_folder in TIMEFRAME_CATEGORIES.values():
 
 USER_STATE = {}
 
-# === ДВОЙНОЙ АНАЛИЗ РЫНКА ===
+# === ДВОЙНОЙ АНАЛИЗ РЫНКА (РАБОЧИЙ API BYBIT V5) ===
 def get_advanced_analysis(symbol, interval, limit):
     try:
         url = f"https://bybit.com{symbol}&interval={interval}&limit={limit}"
@@ -59,8 +59,11 @@ def get_advanced_analysis(symbol, interval, limit):
         if len(candles) < 20:
             return None, None, None
         candles.reverse()
-        closes = [float(candle) for candle in candles]
+        
+        # В Bybit v5 цена закрытия лежит строго в 4-м элементе каждой свечи
+        closes = [float(candle[4]) for candle in candles]
         last_price = closes[-1]
+        
         gains, losses = [], []
         for i in range(1, len(closes)):
             delta = closes[i] - closes[i-1]
@@ -179,9 +182,9 @@ def handle_timeframe_choice(call):
         f"📊 **АНАЛИЗ: {asset_name}**\n"
         f"⏱ **Время экспирации:** {tf_name}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💵 **Живая цена:** {price:{fmt}}\n"
+        f"💵 **Живая цена:** {price:.4f}\n"
         f"📈 **Индекс RSI:** {rsi:.2f}\n"
-        f"📉 **Линия тренда SMA:** {sma:{fmt}}\n"
+        f"📉 **Линия тренда SMA:** {sma:.4f}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{verdict}"
     )
