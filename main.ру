@@ -3,19 +3,19 @@ from telebot import types
 import urllib.request
 import json
 
-# === НАСТРОЙКИ TELEGRAM ===
+# === TELEGRAM SETTINGS ===
 BOT_TOKEN = "8899997428:AAGR288_K2sCfXkYt8t8AtQZeeQERO53huM"
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# === КАТАЛОГ АКТИВОВ ===
+# === ASSETS CATALOG ===
 CATEGORIES = {
-    "💱 6 ТОП ВАЛЮТНЫХ ПАР": {
+    "CURRENCY": {
         "EURUSDT": "EURUSDT", "GBPUSDT": "GBPUSDT", "USDCUSDT": "USDCUSDT"
     },
-    "🪙 ЗОЛОТО И СЫРЬЕ": {
-        "Золото (PAXG/USDT)": "PAXGUSDT"
+    "COMMODITIES": {
+        "Gold (PAXG/USDT)": "PAXGUSDT"
     },
-    "⚡ ТОП КРИПТОВАЛЮТА": {
+    "CRYPTO": {
         "Bitcoin (BTC)": "BTCUSDT", "Ethereum (ETH)": "ETHUSDT", "Solana (SOL)": "SOLUSDT",
         "Litecoin (LTC)": "LTCUSDT", "Ripple (XRP)": "XRPUSDT"
     }
@@ -25,18 +25,18 @@ ALL_ASSETS = {}
 for cat_assets in CATEGORIES.values():
     ALL_ASSETS.update(cat_assets)
 
-# === ВРЕМЯ ЭКСПИРАЦИИ ===
+# === TIMEFRAMES ===
 TIMEFRAME_CATEGORIES = {
-    "⚡ СЕКУНДЫ (ТУРБО)": {
-        "⏱ 5 секунд": {"label": "5 сек", "limit": 20, "interval": "1"},
-        "⏱ 15 секунд": {"label": "15 сек", "limit": 25, "interval": "1"},
-        "⏱ 30 секунд": {"label": "30 сек", "limit": 30, "interval": "1"}
+    "SECONDS (TURBO)": {
+        "5 sec": {"label": "5s", "limit": 20, "interval": "1"},
+        "15 sec": {"label": "15s", "limit": 25, "interval": "1"},
+        "30 sec": {"label": "30s", "limit": 30, "interval": "1"}
     },
-    "📈 МИНУТЫ (КЛАССИКА)": {
-        "⏱ 1 минута": {"label": "1 мин", "limit": 40, "interval": "1"},
-        "⏱ 2 минуты": {"label": "2 мин", "limit": 40, "interval": "1"},
-        "⏱ 3 минуты": {"label": "3 мин", "limit": 45, "interval": "3"},
-        "⏱ 5 минут": {"label": "5 мин", "limit": 50, "interval": "5"}
+    "MINUTES (CLASSIC)": {
+        "1 min": {"label": "1m", "limit": 40, "interval": "1"},
+        "2 min": {"label": "2m", "limit": 40, "interval": "1"},
+        "3 min": {"label": "3m", "limit": 45, "interval": "3"},
+        "5 min": {"label": "5m", "limit": 50, "interval": "5"}
     }
 }
 
@@ -46,7 +46,7 @@ for tf_folder in TIMEFRAME_CATEGORIES.values():
 
 USER_STATE = {}
 
-# === ДВОЙНОЙ АНАЛИЗ РЫНКА (РАБОЧИЙ API BYBIT V5) ===
+# === BYBIT V5 MARKET ANALYSIS ===
 def get_advanced_analysis(symbol, interval, limit):
     try:
         url = f"https://bybit.com{symbol}&interval={interval}&limit={limit}"
@@ -59,11 +59,8 @@ def get_advanced_analysis(symbol, interval, limit):
         if len(candles) < 20:
             return None, None, None
         candles.reverse()
-        
-        # В Bybit v5 цена закрытия лежит строго в 4-м элементе каждой свечи
         closes = [float(candle[4]) for candle in candles]
         last_price = closes[-1]
-        
         gains, losses = [], []
         for i in range(1, len(closes)):
             delta = closes[i] - closes[i-1]
@@ -96,8 +93,8 @@ def get_assets_inline(category_name):
 def get_timeframe_type_inline():
     markup = types.InlineKeyboardMarkup(row_width=1)
     buttons = [
-        types.InlineKeyboardButton(text="⚡ Торговать на Секунды (Турбо)", callback_data="type_seconds"),
-        types.InlineKeyboardButton(text="📈 Торговать на Минуты (Классика)", callback_data="type_minutes")
+        types.InlineKeyboardButton(text="⚡ SECONDS (TURBO)", callback_data="type_seconds"),
+        types.InlineKeyboardButton(text="📈 MINUTES (CLASSIC)", callback_data="type_minutes")
     ]
     markup.add(*buttons)
     return markup
@@ -113,7 +110,7 @@ def get_exact_timeframe_inline(category_key):
 def send_welcome(message):
     bot.send_message(
         message.chat.id, 
-        "📂 **Торговая панель Pocket Option**\nВыберите категорию активов:", 
+        "📂 **Pocket Option Dashboard**\nSelect asset category:", 
         reply_markup=get_categories_keyboard(),
         parse_mode="Markdown"
     )
@@ -122,7 +119,7 @@ def send_welcome(message):
 def handle_category(message):
     bot.send_message(
         message.chat.id, 
-        f"📋 Активы категории *{message.text}*:\nВыберите инструмент для торговли:", 
+        f"📋 Category *{message.text}*:\nSelect trading instrument:", 
         reply_markup=get_assets_inline(message.text),
         parse_mode="Markdown"
     )
@@ -135,7 +132,7 @@ def handle_asset_choice(call):
     bot.answer_callback_query(call.id)
     bot.send_message(
         call.message.chat.id,
-        f"⏱ **Актив выбран: {asset_name}**\n\nВ каком формате вы будете открывать сделку на Pocket Option?",
+        f"⏱ **Asset: {asset_name}**\n\nSelect expiration format for Pocket Option:",
         reply_markup=get_timeframe_type_inline(),
         parse_mode="Markdown"
     )
@@ -144,13 +141,13 @@ def handle_asset_choice(call):
 def handle_time_type(call):
     bot.answer_callback_query(call.id)
     if call.data == "type_seconds":
-        category_key = "⚡ СЕКУНДЫ (ТУРБО)"
+        category_key = "SECONDS (TURBO)"
     else:
-        category_key = "📈 МИНУТЫ (КЛАССИКА)"
+        category_key = "MINUTES (CLASSIC)"
     bot.edit_message_text(
         chat_id=call.message.chat.id,
         message_id=call.message.id,
-        text=f"Выбран режим: *{category_key}*\n\nВыберите точное время экспирации сделки:",
+        text=f"Format: *{category_key}*\n\nSelect exact expiration time:",
         reply_markup=get_exact_timeframe_inline(category_key),
         parse_mode="Markdown"
     )
@@ -160,31 +157,32 @@ def handle_timeframe_choice(call):
     tf_name = call.data.replace("tf_", "")
     chat_id = call.message.chat.id
     if chat_id not in USER_STATE:
-        bot.send_message(chat_id, "⚠️ Ошибка сессии. Пожалуйста, введите /start заново.")
+        bot.send_message(chat_id, "⚠️ Session error. Please type /start again.")
         return
     state = USER_STATE[chat_id]
     asset_name = state["asset_name"]
     symbol = state["symbol"]
-    bot.answer_callback_query(call.id, text=f"Анализирую под {tf_name}...")
+    bot.answer_callback_query(call.id, text=f"Analyzing {tf_name}...")
     tf_config = ALL_TIMEFRAMES[tf_name]
     price, rsi, sma = get_advanced_analysis(symbol, tf_config["interval"], tf_config["limit"])
     if price is None or rsi is None or sma is None:
-        bot.send_message(chat_id, "❌ Не удалось получить котировки от биржи. Попробуйте еще раз.")
+        bot.send_message(chat_id, "❌ Market API connection error. Try again.")
         return
-    fmt = ".5f" if "USD" in asset_name and "/" in asset_name else ".2f"
+        
     if rsi <= 35 and price < sma:
-        verdict = f"🟢 **СИГНАЛ: ВРЕМЯ ПОКУПКИ!**\n📥 **В Pocket Option:** Жмите **ВВЕРХ (Зеленая)** 📈\n⏱ **Время:** {tf_config['label']}\n🎯 _Идеальный момент для отскока цены наверх!_"
+        verdict = f"🟢 **SIGNAL: BUY!**\n📥 **Pocket Option:** Click **UP (Green)** 📈\n⏱ **Time:** {tf_config['label']}\n🎯 *Perfect bounce moment!*"
     elif rsi >= 65 and price > sma:
-        verdict = f"🔴 **СИГНАЛ: ВРЕМЯ ДЛЯ ПРОДАЖИ!**\n📤 **В Pocket Option:** Жмите **ВНИЗ (Красная)** 📉\n⏱ **Время:** {tf_config['label']}\n🎯 _Идеальный момент для отскока цены вниз!_"
+        verdict = f"🔴 **SIGNAL: SELL!**\n📤 **Pocket Option:** Click **DOWN (Red)** 📉\n⏱ **Time:** {tf_config['label']}\n🎯 *Perfect drop moment!*"
     else:
-        verdict = f"⏳ **НЕЙТРАЛЬНАЯ ЗОНА (Ожидание)**\n📊 Для таймфрейма {tf_config['label']} четкого разворота нет.\n👉 _Рекомендация: Попробуйте выбрать другое время или другой актив._"
+        verdict = f"⏳ **NEUTRAL ZONE (Wait)**\n📊 No strong reversal setup for {tf_config['label']}.\n👉 *Recommendation: Try another timeframe or asset.*"
+        
     response = (
-        f"📊 **АНАЛИЗ: {asset_name}**\n"
-        f"⏱ **Время экспирации:** {tf_name}\n"
+        f"📊 **ANALYSIS: {asset_name}**\n"
+        f"⏱ **Expiration:** {tf_name}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n"
-        f"💵 **Живая цена:** {price:.4f}\n"
-        f"📈 **Индекс RSI:** {rsi:.2f}\n"
-        f"📉 **Линия тренда SMA:** {sma:.4f}\n"
+        f"💵 **Live Price:** {price:.4f}\n"
+        f"📈 **RSI Index:** {rsi:.2f}\n"
+        f"📉 **Trend SMA:** {sma:.4f}\n"
         f"━━━━━━━━━━━━━━━━━━━━\n\n"
         f"{verdict}"
     )
