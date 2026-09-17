@@ -188,5 +188,5 @@ def handle_timeframe_choice(call):
     bot.send_message(chat_id, response, parse_mode="Markdown")
 
 if __name__ == "__main__":
-    print("🚀 Робот Pocket Option успешно запущен!")
     bot.infinity_polling()
+
