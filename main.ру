@@ -3,36 +3,28 @@ from threading import Thread
 from flask import Flask
 import telebot
 
-# 1. Создаем фальшивый веб-сервер для обмана Render
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Бот работает!"
+    return "Bot is running!"
 
 def run_web_server():
-    # Render автоматически передает нужный порт в переменную окружения PORT
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. Инициализируем вашего Telegram бота
-# Переменную BOT_TOKEN мы безопасно берем из настроек Render Environment
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "Привет! Робот Pocket Option успешно запущен и готов к работе!")
+    bot.reply_to(message, "Привет! Робот Pocket Option успешно запущен!")
 
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
     bot.reply_to(message, f"Вы написали: {message.text}")
 
-# 3. Запуск всего вместе
 if __name__ == "__main__":
-    # Запускаем веб-сервер в отдельном потоке
     Thread(target=run_web_server).start()
-    
-    # Запускаем бесконечный опрос Telegram
-    print("Робот Pocket Option успешно запущен...")
+    print("Robot started...")
     bot.infinity_polling()
