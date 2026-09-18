@@ -4,30 +4,34 @@ from telebot import types
 from flask import Flask, request
 from tradingview_ta import TA_Handler, Interval
 
-# Инициализируем бота из переменной окружения
+# Инициализируем бота из переменной окружения Render
 TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 # Настройка Flask для работы Webhook на Render
 app = Flask(__name__)
 
-# Функция для получения реального сигнала с TradingView
+# Функция для получения реального технического анализа с TradingView
 def get_trading_signal(symbol, exchange, screener):
     try:
         handler = TA_Handler(
             symbol=symbol,
             exchange=exchange,
             screener=screener,
-            interval=Interval.INTERVAL_1_MINUTE # Анализ на 1-минутном графике
+            interval=Interval.INTERVAL_1_MINUTE  # Анализ рынка на 1-минутном графике
         )
         analysis = handler.get_analysis()
         summary = analysis.summary['RECOMMENDATION']
         
-        # Переводим рекомендации в понятный цветной формат
-        if "BUY" in summary:
-            return f"🟢 **BUY / ПОКУПКА**\n📈 Тренд: {summary}"
+        # Переводим рекомендации в красивый цветной формат
+        if "STRONG_BUY" in summary:
+            return f"🟢🟢 **STRONG BUY / АКТИВНО ПОКУПАТЬ**\n📈 Тренд: Сильный бычий"
+        elif "BUY" in summary:
+            return f"🟢 **BUY / ПОКУПАТЬ**\n📈 Тренд: Восходящий"
+        elif "STRONG_SELL" in summary:
+            return f"🔴🔴 **STRONG SELL / АКТИВНО ПРОДАВАТЬ**\n📉 Тренд: Сильный медвежий"
         elif "SELL" in summary:
-            return f"🔴 **SELL / ПРОДАЖА**\n📉 Тренд: {summary}"
+            return f"🔴 **SELL / ПРОДАВАТЬ**\n📉 Тренд: Нисходящий"
         else:
             return f"🟡 **NEUTRAL / НЕЙТРАЛЬНО**\n⏳ Рекомендуется подождать"
     except Exception as e:
@@ -51,31 +55,34 @@ def send_welcome(message):
         reply_markup=markup
     )
 
-# Обработка нажатий на кнопки
+# Обработка нажатий на двуязычные кнопки
 @bot.message_handler(func=lambda message: True)
 def handle_buttons(message):
-    bot.send_message(message.chat.id, "🔄 Анализируем рынок... / Analyzing market...")
+    # Временное сообщение, чтобы пользователь видел, что бот думает
+    status_msg = bot.send_message(message.chat.id, "🔄 Анализируем рынок... / Analyzing market...")
     
     if message.text == "💱 Валюта / Currency":
-        # Анализируем EURUSD на форекс-секции FX_IDC
-        signal = get_trading_signal("EURUSD", "FX_IDC", "forex")
+        # Анализируем EURUSD на стабильном форекс-коннекторе FX
+        signal = get_trading_signal("EURUSD", "FX", "forex")
         response = f"📊 **Пара: EUR/USD (Forex)**\n\n{signal}\n\n⏱ Экспирация / Expiration: 1-5 min"
         
     elif message.text == "👑 Товары / Commodities":
-        # Анализируем Золото (GOLD)
+        # Анализируем Золото (GOLD) на бирже TVC
         signal = get_trading_signal("GOLD", "TVC", "cfd")
         response = f"📊 **Актив: GOLD / Золото**\n\n{signal}\n\n⏱ Экспирация / Expiration: 1-5 min"
         
     elif message.text == "🪙 Крипта / Crypto":
-        # Анализируем Bitcoin (BTCUSDT) на Binance
+        # Анализируем Bitcoin (BTCUSDT) на бирже BINANCE
         signal = get_trading_signal("BTCUSDT", "BINANCE", "crypto")
         response = f"📊 **Пара: BTC/USDT (Crypto)**\n\n{signal}\n\n⏱ Экспирация / Expiration: 1-5 min"
     else:
         response = "❓ Неизвестная команда / Unknown command"
         
+    # Удаляем временное сообщение "Анализируем рынок" и присылаем готовый сигнал
+    bot.delete_message(message.chat.id, status_msg.message_id)
     bot.send_message(message.chat.id, response, parse_mode="Markdown")
 
-# Настройки сервера для Render
+# Настройки сервера вебхуков для Render
 @app.route('/' + TOKEN, methods=['POST'])
 def getMessage():
     json_string = request.get_data().decode('utf-8')
