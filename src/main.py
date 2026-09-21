@@ -70,7 +70,7 @@ def process_otc_signal(call):
     moscow_time = utc_time + timedelta(hours=3)
     current_time = moscow_time.strftime("%H:%M:%S")
 
-    # Настройка случайного времени экспирации (исправлен синтаксис random.choice)
+    # НАСТРОЙКА ВРЕМЕНИ ЭКСПИРАЦИИ (Значения добавлены внутрь списков!)
     exp_minutes = random.choice([1, 2, 3, 5])
     exp_seconds = random.choice([0, 15, 30, 45])
     
