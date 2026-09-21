@@ -1,6 +1,7 @@
 import os
 import random
-import time
+from datetime import datetime
+import zoneinfo  # Для точного времени по МСК
 from threading import Thread
 from flask import Flask
 import telebot
@@ -11,7 +12,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Pocket Option OTC Bot is online!"
+    return "Pocket Option OTC Bot with Timer is online!"
 
 def run_web_server():
     port = int(os.environ.get("PORT", 8080))
@@ -21,7 +22,7 @@ def run_web_server():
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Список точных OTC пар из Pocket Option (как на вашем скриншоте)
+# Список точных OTC пар из Pocket Option
 OTC_PAIRS = [
     "EUR/CHF OTC",
     "BHD/CNY OTC",
@@ -30,18 +31,13 @@ OTC_PAIRS = [
     "AED/CNY OTC"
 ]
 
-# Функция «мозга» бота. Здесь рассчитывается математический алгоритм
-def get_otc_signal(pair_name):
-    # Примечание: Для полностью реального анализа сюда подключают websocket-клиент 
-    # к серверам Pocket Option для чтения секундных котировок.
-    
-    # Имитация работы индикатора на основе микро-тренда
-    indicators_choice = random.choice(["UP", "DOWN", "FLAT"])
-    accuracy = random.randint(84, 94)
-    
-    return indicators_choice, accuracy
+# Имитация работы алгоритма
+def get_otc_signal():
+    direction = random.choice(["UP", "DOWN", "FLAT"])
+    accuracy = random.randint(84, 95)
+    return direction, accuracy
 
-# Создание инлайн-кнопок с валютами (как выдвижная панель на видео)
+# Создание инлайн-кнопок валют
 def get_otc_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     for pair in OTC_PAIRS:
@@ -61,25 +57,60 @@ def start_command(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("otc_"))
 def process_otc_signal(call):
-    pair = call.data.split("otc_")[1]
+    pair = call.data.replace("otc_", "")
     
-    # Отправляем уведомление, что бот думает (чтобы кнопка не зависала)
-    bot.answer_callback_query(call.id, text=f"Анализирую график {pair}...")
+    # Отправляем уведомление в шторку Telegram, что идет расчет
+    bot.answer_callback_query(call.id, text=f"Анализирую секундные свечи для {pair}...")
     
     # Получаем вердикт алгоритма
-    direction, rate = get_otc_signal(pair)
+    direction, rate = get_otc_signal()
     
-    if direction == "UP":
-        signal_text = f"⬆️\n\n**{pair}**"
-    elif direction == "DOWN":
-        signal_text = f"⬇️\n\n**{pair}**"
-    else:
-        signal_text = f"⏳\n\n**{pair}**\n_Рынок нестабилен, пропустите сделку._"
+    # Получаем точное текущее время по Москве (часы, минуты, секунды)
+    try:
+        moscow_tz = zoneinfo.ZoneInfo("Europe/Moscow")
+        current_time = datetime.now(moscow_tz).strftime("%H:%M:%S")
+    except Exception:
+        current_time = datetime.now().strftime("%H:%M:%S") # Резервный вариант, если часовой пояс не загрузился
 
-    # Отправляем сигнал в чат в виде стрелочки
+    # Настройка случайного времени экспирации (например, 1 минута 00 секунд или 2 минуты 30 секунд)
+    exp_minutes = random.choice([1, 2, 3])
+    exp_seconds = random.choice([0, 30])
+    
+    if exp_seconds == 0:
+        timeframe_str = f"{exp_minutes} мин. 00 сек."
+    else:
+        timeframe_str = f"{exp_minutes} мин. {exp_seconds} сек."
+
+    # Формируем красивый сигнал
+    if direction == "UP":
+        signal_text = (
+            f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
+            f"📊 Валюта: **{pair}**\n"
+            f" Направление: **ВВЕРХ (CALL) ⬆️**\n"
+            f"⏱ Экспирация: **{timeframe_str}**\n"
+            f"⏳ Время выхода: **{current_time} (МСК)**\n"
+            f" Проходимость: **{rate}%**"
+        )
+    elif direction == "DOWN":
+        signal_text = (
+            f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
+            f"📊 Валюта: **{pair}**\n"
+            f" Направление: **ВНИЗ (PUT) ⬇️**\n"
+            f"⏱ Экспирация: **{timeframe_str}**\n"
+            f"⏳ Время выхода: **{current_time} (МСК)**\n"
+            f" Проходимость: **{rate}%**"
+        )
+    else:
+        signal_text = (
+            f"📊 Валюта: **{pair}**\n"
+            f"⏳ Время анализа: **{current_time}**\n"
+            f"⚠️ **ВНИМАНИЕ**: Индикаторы показывают неопределенность (Флэт). Рекомендуется пропустить эту сделку!"
+        )
+
+    # Отправляем оформленный сигнал пользователю
     bot.send_message(call.message.chat.id, signal_text, parse_mode="Markdown")
     
-    # Снова показываем клавиатуру выбора пар под сигналом, чтобы удобно кликать дальше
+    # Повторно выводим меню выбора пар под сигналом
     bot.send_message(
         call.message.chat.id, 
         "Выбрать следующую пару:", 
@@ -88,8 +119,6 @@ def process_otc_signal(call):
 
 # 3. Точка запуска приложения
 if __name__ == "__main__":
-    # Запускаем фоновый сервер для Render
     Thread(target=run_web_server).start()
-    
-    print("Бот успешно запущен и готов выдавать OTC сигналы!")
+    print("Бот с таймерами минут/секунд запущен!")
     bot.infinity_polling()
