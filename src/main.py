@@ -56,13 +56,10 @@ def start_command(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("otc_"))
 def process_otc_signal(call):
-    # Извлекаем имя пары
     pair = call.data.replace("otc_", "")
     
-    # Отправляем уведомление, что идет расчет
     bot.answer_callback_query(call.id, text=f"Анализирую секундные свечи для {pair}...")
     
-    # Получаем вердикт алгоритма
     direction, rate = get_otc_signal()
     
     # Вычисляем точное время по Московскому времени (UTC+3)
@@ -70,7 +67,7 @@ def process_otc_signal(call):
     moscow_time = utc_time + timedelta(hours=3)
     current_time = moscow_time.strftime("%H:%M:%S")
 
-    # НАСТРОЙКА ВРЕМЕНИ ЭКСПИРАЦИИ (Значения добавлены внутрь списков!)
+    # Передаем списки вариантов внутрь функции random.choice
     exp_minutes = random.choice([1, 2, 3, 5])
     exp_seconds = random.choice([0, 15, 30, 45])
     
@@ -79,7 +76,6 @@ def process_otc_signal(call):
     else:
         timeframe_str = f"{exp_minutes} мин. {exp_seconds} сек."
 
-    # Формируем красивый сигнал
     if direction == "UP":
         signal_text = (
             f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
@@ -105,17 +101,14 @@ def process_otc_signal(call):
             f"⚠️ **ВНИМАНИЕ**: Индикаторы показывают неопределенность (Флэт). Рекомендуется пропустить эту сделку!"
         )
 
-    # Отправляем оформленный сигнал пользователю
     bot.send_message(call.message.chat.id, signal_text, parse_mode="Markdown")
     
-    # Повторно выводим меню выбора пар под сигналом
     bot.send_message(
         call.message.chat.id, 
         "Выбрать следующую пару:", 
         reply_markup=get_otc_keyboard()
     )
 
-# 3. Точка запуска приложения
 if __name__ == "__main__":
     Thread(target=run_web_server).start()
     print("Бот успешно запущен!")
