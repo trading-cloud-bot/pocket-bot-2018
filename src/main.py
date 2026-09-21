@@ -1,7 +1,6 @@
 import os
 import random
 from datetime import datetime
-import zoneinfo  # Для точного времени по МСК
 from threading import Thread
 from flask import Flask
 import telebot
@@ -57,6 +56,7 @@ def start_command(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("otc_"))
 def process_otc_signal(call):
+    # Исправлено извлечение имени пары из callback_data
     pair = call.data.replace("otc_", "")
     
     # Отправляем уведомление в шторку Telegram, что идет расчет
@@ -65,16 +65,12 @@ def process_otc_signal(call):
     # Получаем вердикт алгоритма
     direction, rate = get_otc_signal()
     
-    # Получаем точное текущее время по Москве (часы, минуты, секунды)
-    try:
-        moscow_tz = zoneinfo.ZoneInfo("Europe/Moscow")
-        current_time = datetime.now(moscow_tz).strftime("%H:%M:%S")
-    except Exception:
-        current_time = datetime.now().strftime("%H:%M:%S") # Резервный вариант, если часовой пояс не загрузился
+    # Получаем точное текущее время (часы, минуты, секунды)
+    current_time = datetime.now().strftime("%H:%M:%S")
 
-    # Настройка случайного времени экспирации (например, 1 минута 00 секунд или 2 минуты 30 секунд)
-    exp_minutes = random.choice([1, 2, 3])
-    exp_seconds = random.choice([0, 30])
+    # Настройка случайного времени экспирации (исправлены пустые скобки choice)
+    exp_minutes = random.choice([1, 2, 3, 5])
+    exp_seconds = random.choice([0, 15, 30, 45])
     
     if exp_seconds == 0:
         timeframe_str = f"{exp_minutes} мин. 00 сек."
@@ -88,7 +84,7 @@ def process_otc_signal(call):
             f"📊 Валюта: **{pair}**\n"
             f" Направление: **ВВЕРХ (CALL) ⬆️**\n"
             f"⏱ Экспирация: **{timeframe_str}**\n"
-            f"⏳ Время выхода: **{current_time} (МСК)**\n"
+            f"⏳ Время выхода: **{current_time}**\n"
             f" Проходимость: **{rate}%**"
         )
     elif direction == "DOWN":
@@ -97,7 +93,7 @@ def process_otc_signal(call):
             f"📊 Валюта: **{pair}**\n"
             f" Направление: **ВНИЗ (PUT) ⬇️**\n"
             f"⏱ Экспирация: **{timeframe_str}**\n"
-            f"⏳ Время выхода: **{current_time} (МСК)**\n"
+            f"⏳ Время выхода: **{current_time}**\n"
             f" Проходимость: **{rate}%**"
         )
     else:
