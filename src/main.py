@@ -18,7 +18,8 @@ def run_web_server():
     app.run(host='0.0.0.0', port=port)
 
 # 2. Инициализация Telegram бота
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_TOKEN = "1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Список точных OTC пар из Pocket Option
