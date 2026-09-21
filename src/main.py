@@ -17,8 +17,9 @@ def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. Инициализация Telegram бота с вашим токеном
-BOT_TOKEN = "8899997428:AAFh-lduiOTB7y3AmGw1tzCCZ5id6Zf4hFA"
+# 2. Безопасная инициализация Telegram бота через переменную окружения
+# GitHub больше не будет присылать предупреждения системы безопасности!
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Список точных OTC пар из Pocket Option
@@ -53,17 +54,19 @@ def process_otc_signal(call):
     try:
         pair = call.data
         
-        # Убираем часики загрузки с кнопки
+        # Убираем часики загрузки с кнопки в Telegram
         bot.answer_callback_query(call.id)
         
         # Расчет точного времени по Московскому времени (UTC+3)
         moscow_time = datetime.utcnow() + timedelta(hours=3)
         current_time = moscow_time.strftime("%H:%M:%S")
 
-        # Случайный выбор направления и времени экспирации (списки заполнены!)
+        # Случайный выбор направления и проходимости сигнала
         direction = random.choice(["ВВЕРХ (CALL) ⬆️", "ВНИЗ (PUT) ⬇️"])
         accuracy = random.randint(86, 94)
-        exp_min = random.choice([1, 2, 3, 5])
+        
+        # Случайный выбор времени экспирации (от 1 до 3 минут)
+        exp_min = random.choice([1, 2, 3])
         
         # Формируем красивый текст сигнала
         signal_text = (
@@ -88,13 +91,15 @@ def process_otc_signal(call):
         print(f"Ошибка при обработке кнопки: {e}")
 
 if __name__ == "__main__":
+    # Запускаем фоновый веб-сервер для Render
     Thread(target=run_web_server).start()
     
-    # Сброс старого вебхука для исправления ошибки 409
+    # ФИКС БЛОКИРОВКИ: Принудительно очищаем старые вебхуки перед стартом опроса
     try:
+        print("Сброс старого вебхука...")
         bot.remove_webhook()
     except Exception as e:
         print(f"Не удалось удалить вебхук: {e}")
     
-    print("Бот успешно запущен!")
+    print("Бот успешно запущен в режиме постоянного опроса!")
     bot.infinity_polling()
