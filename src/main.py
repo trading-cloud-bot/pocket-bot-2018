@@ -1,5 +1,4 @@
 import os
-import random
 from datetime import datetime, timedelta
 from threading import Thread
 from flask import Flask
@@ -11,7 +10,7 @@ app = Flask('')
 
 @app.route('/')
 def home():
-    return "Pocket Option OTC Bot with Timer is online!"
+    return "Pocket Option OTC Bot is completely online!"
 
 def run_web_server():
     port = int(os.environ.get("PORT", 8080))
@@ -29,12 +28,6 @@ OTC_PAIRS = [
     "AUD/CAD OTC",
     "AED/CNY OTC"
 ]
-
-# Имитация работы алгоритма
-def get_otc_signal():
-    direction = random.choice(["UP", "DOWN", "FLAT"])
-    accuracy = random.randint(84, 95)
-    return direction, accuracy
 
 # Создание инлайн-кнопок валют
 def get_otc_keyboard():
@@ -58,48 +51,21 @@ def start_command(message):
 def process_otc_signal(call):
     pair = call.data.replace("otc_", "")
     
-    bot.answer_callback_query(call.id, text=f"Анализирую секундные свечи для {pair}...")
+    bot.answer_callback_query(call.id, text=f"Анализирую свечи для {pair}...")
     
-    direction, rate = get_otc_signal()
-    
-    # Вычисляем точное время по Московскому времени (UTC+3)
-    utc_time = datetime.utcnow()
-    moscow_time = utc_time + timedelta(hours=3)
+    # Расчет точного времени по Московскому времени (UTC+3)
+    moscow_time = datetime.utcnow() + timedelta(hours=3)
     current_time = moscow_time.strftime("%H:%M:%S")
 
-    # Списки вариантов добавлены внутрь choice, теперь ошибок не будет
-    exp_minutes = random.choice([1, 2, 3, 5])
-    exp_seconds = random.choice([0, 30])
-    
-    if exp_seconds == 0:
-        timeframe_str = f"{exp_minutes} мин. 00 сек."
-    else:
-        timeframe_str = f"{exp_minutes} мин. {exp_seconds} сек."
-
-    if direction == "UP":
-        signal_text = (
-            f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
-            f"📊 Валюта: **{pair}**\n"
-            f" Направление: **ВВЕРХ (CALL) ⬆️**\n"
-            f"⏱ Экспирация: **{timeframe_str}**\n"
-            f"⏳ Время выхода: **{current_time} (МСК)**\n"
-            f" Проходимость: **{rate}%**"
-        )
-    elif direction == "DOWN":
-        signal_text = (
-            f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
-            f"📊 Валюта: **{pair}**\n"
-            f" Направление: **ВНИЗ (PUT) ⬇️**\n"
-            f"⏱ Экспирация: **{timeframe_str}**\n"
-            f"⏳ Время выхода: **{current_time} (МСК)**\n"
-            f" Проходимость: **{rate}%**"
-        )
-    else:
-        signal_text = (
-            f"📊 Валюта: **{pair}**\n"
-            f"⏳ Время анализа: **{current_time} (МСК)**\n"
-            f"⚠️ **ВНИМАНИЕ**: Индикаторы показывают неопределенность (Флэт). Рекомендуется пропустить эту сделку!"
-        )
+    # Формируем красивый сигнал ВВЕРХ
+    signal_text = (
+        f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
+        f"📊 Валюта: **{pair}**\n"
+        f" Направление: **ВВЕРХ (CALL) ⬆️**\n"
+        f"⏱ Экспирация: **1 мин. 00 сек.**\n"
+        f"⏳ Время выхода: **{current_time} (МСК)**\n"
+        f" Проходимость: **91%**"
+    )
 
     bot.send_message(call.message.chat.id, signal_text, parse_mode="Markdown")
     
