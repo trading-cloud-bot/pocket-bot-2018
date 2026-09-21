@@ -17,9 +17,8 @@ def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. Инициализация Telegram бота
-# ВНИМАНИЕ: Обязательно вставьте ваш токен от @BotFather вместо текста ниже!
-BOT_TOKEN ="8899997428:AAGR288_K2sCfXkYt8t8AtQZeeQERO53huM"
+# 2. Инициализация Telegram бота с вашим токеном
+BOT_TOKEN = "8899997428:AAGR288_K2sCfXkYt8t8AtQZeeQERO53huM"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Список точных OTC пар из Pocket Option
@@ -68,14 +67,14 @@ def process_otc_signal(call):
     moscow_time = utc_time + timedelta(hours=3)
     current_time = moscow_time.strftime("%H:%M:%S")
 
-    # ТЕПЕРЬ СПИСКИ ЗАПОЛНЕНЫ ПРАВИЛЬНО — ОШИБКИ НЕ БУДЕТ
-    exp_minutes = random.choice([1, 2, 3, 4, 5])
+    # Списки вариантов добавлены внутрь choice, теперь ошибок не будет
+    exp_minutes = random.choice([1, 2, 3, 5])
     exp_seconds = random.choice([0, 30])
     
     if exp_seconds == 0:
         timeframe_str = f"{exp_minutes} мин. 00 сек."
     else:
-        timeframe_str = f"{exp_minutes} мин. {exp_seconds} sec."
+        timeframe_str = f"{exp_minutes} мин. {exp_seconds} сек."
 
     if direction == "UP":
         signal_text = (
