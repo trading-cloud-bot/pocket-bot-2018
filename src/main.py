@@ -18,7 +18,7 @@ def run_web_server():
     app.run(host='0.0.0.0', port=port)
 
 # 2. Инициализация Telegram бота с вашим токеном
-BOT_TOKEN = "8899997428:AAGR288_K2sCfXkYt8t8AtQZeeQERO53huM"
+BOT_TOKEN = "8899997428:AAFh-lduiOTB7y3AmGw1tzCCZ5id6Zf4hFA"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Список точных OTC пар из Pocket Option
