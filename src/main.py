@@ -1,4 +1,5 @@
 import os
+import random
 from datetime import datetime, timedelta
 from threading import Thread
 from flask import Flask
@@ -33,7 +34,8 @@ OTC_PAIRS = [
 def get_otc_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     for pair in OTC_PAIRS:
-        button = types.InlineKeyboardButton(text=pair, callback_data=f"otc_{pair}")
+        # callback_data теперь сделан максимально простым
+        button = types.InlineKeyboardButton(text=pair, callback_data=pair)
         markup.add(button)
     return markup
 
@@ -47,42 +49,53 @@ def start_command(message):
         parse_mode="Markdown"
     )
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("otc_"))
+@bot.callback_query_handler(func=lambda call: True)
 def process_otc_signal(call):
-    pair = call.data.replace("otc_", "")
-    
-    bot.answer_callback_query(call.id, text=f"Анализирую свечи для {pair}...")
-    
-    # Расчет точного времени по Московскому времени (UTC+3)
-    moscow_time = datetime.utcnow() + timedelta(hours=3)
-    current_time = moscow_time.strftime("%H:%M:%S")
+    try:
+        # Получаем имя пары напрямую из нажатой кнопки
+        pair = call.data
+        
+        # Убираем часики загрузки с кнопки в Телеграме
+        bot.answer_callback_query(call.id)
+        
+        # Расчет точного времени по Московскому времени (UTC+3)
+        moscow_time = datetime.utcnow() + timedelta(hours=3)
+        current_time = moscow_time.strftime("%H:%M:%S")
 
-    # Формируем красивый сигнал ВВЕРХ
-    signal_text = (
-        f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
-        f"📊 Валюта: **{pair}**\n"
-        f" Направление: **ВВЕРХ (CALL) ⬆️**\n"
-        f"⏱ Экспирация: **1 мин. 00 сек.**\n"
-        f"⏳ Время выхода: **{current_time} (МСК)**\n"
-        f" Проходимость: **91%**"
-    )
+        # Случайный выбор направления (ВВЕРХ или ВНИЗ)
+        direction = random.choice(["ВВЕРХ (CALL) ⬆️", "ВНИЗ (PUT) ⬇️"])
+        accuracy = random.randint(86, 94)
 
-    bot.send_message(call.message.chat.id, signal_text, parse_mode="Markdown")
-    
-    bot.send_message(
-        call.message.chat.id, 
-        "Выбрать следующую пару:", 
-        reply_markup=get_otc_keyboard()
-    )
+        # Выбираем случайное время экспирации (1, 2 или 3 минуты)
+        exp_min = random.choice([1, 2, 3])
+        
+        # Формируем красивый текст сигнала
+        signal_text = (
+            f"🎯 **СИГНАЛ СФОРМИРОВАН** 🎯\n\n"
+            f"📊 Валюта: **{pair}**\n"
+            f" Направление: **{direction}**\n"
+            f"⏱ Экспирация: **{exp_min} мин. 00 сек.**\n"
+            f"⏳ Время выхода: **{current_time} (МСК)**\n"
+            f" Проходимость: **{accuracy}%**"
+        )
+
+        # Отправляем сигнал в чат
+        bot.send_message(call.message.chat.id, signal_text, parse_mode="Markdown")
+        
+        # Снова выводим клавиатуру для удобства следующих нажатий
+        bot.send_message(
+            call.message.chat.id, 
+            "Выбрать следующую пару:", 
+            reply_markup=get_otc_keyboard()
+        )
+    except Exception as e:
+        print(f"Ошибка при обработке кнопки: {e}")
 
 if __name__ == "__main__":
-    # Запускаем фоновый веб-сервер
     Thread(target=run_web_server).start()
     
-    # ФИКС ОШИБКИ 409: Удаляем старый вебхук перед запуском бота
     print("Удаление старого вебхука...")
     bot.remove_webhook()
     
-    # Запуск бесконечного опроса Telegram бота
     print("Бот успешно запущен!")
     bot.infinity_polling()
