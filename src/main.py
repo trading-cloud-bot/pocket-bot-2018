@@ -1,6 +1,6 @@
 import os
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Thread
 from flask import Flask
 import telebot
@@ -56,19 +56,21 @@ def start_command(message):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("otc_"))
 def process_otc_signal(call):
-    # Исправлено извлечение имени пары из callback_data
+    # Извлекаем имя пары
     pair = call.data.replace("otc_", "")
     
-    # Отправляем уведомление в шторку Telegram, что идет расчет
+    # Отправляем уведомление, что идет расчет
     bot.answer_callback_query(call.id, text=f"Анализирую секундные свечи для {pair}...")
     
     # Получаем вердикт алгоритма
     direction, rate = get_otc_signal()
     
-    # Получаем точное текущее время (часы, минуты, секунды)
-    current_time = datetime.now().strftime("%H:%M:%S")
+    # Вычисляем точное время по Московскому времени (UTC+3)
+    utc_time = datetime.utcnow()
+    moscow_time = utc_time + timedelta(hours=3)
+    current_time = moscow_time.strftime("%H:%M:%S")
 
-    # Настройка случайного времени экспирации (исправлены пустые скобки choice)
+    # Настройка случайного времени экспирации (исправлен синтаксис random.choice)
     exp_minutes = random.choice([1, 2, 3, 5])
     exp_seconds = random.choice([0, 15, 30, 45])
     
@@ -84,7 +86,7 @@ def process_otc_signal(call):
             f"📊 Валюта: **{pair}**\n"
             f" Направление: **ВВЕРХ (CALL) ⬆️**\n"
             f"⏱ Экспирация: **{timeframe_str}**\n"
-            f"⏳ Время выхода: **{current_time}**\n"
+            f"⏳ Время выхода: **{current_time} (МСК)**\n"
             f" Проходимость: **{rate}%**"
         )
     elif direction == "DOWN":
@@ -93,13 +95,13 @@ def process_otc_signal(call):
             f"📊 Валюта: **{pair}**\n"
             f" Направление: **ВНИЗ (PUT) ⬇️**\n"
             f"⏱ Экспирация: **{timeframe_str}**\n"
-            f"⏳ Время выхода: **{current_time}**\n"
+            f"⏳ Время выхода: **{current_time} (МСК)**\n"
             f" Проходимость: **{rate}%**"
         )
     else:
         signal_text = (
             f"📊 Валюта: **{pair}**\n"
-            f"⏳ Время анализа: **{current_time}**\n"
+            f"⏳ Время анализа: **{current_time} (МСК)**\n"
             f"⚠️ **ВНИМАНИЕ**: Индикаторы показывают неопределенность (Флэт). Рекомендуется пропустить эту сделку!"
         )
 
@@ -116,5 +118,5 @@ def process_otc_signal(call):
 # 3. Точка запуска приложения
 if __name__ == "__main__":
     Thread(target=run_web_server).start()
-    print("Бот с таймерами минут/секунд запущен!")
+    print("Бот успешно запущен!")
     bot.infinity_polling()
