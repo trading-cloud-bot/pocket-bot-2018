@@ -34,7 +34,6 @@ OTC_PAIRS = [
 def get_otc_keyboard():
     markup = types.InlineKeyboardMarkup(row_width=1)
     for pair in OTC_PAIRS:
-        # callback_data теперь сделан максимально простым
         button = types.InlineKeyboardButton(text=pair, callback_data=pair)
         markup.add(button)
     return markup
@@ -52,22 +51,19 @@ def start_command(message):
 @bot.callback_query_handler(func=lambda call: True)
 def process_otc_signal(call):
     try:
-        # Получаем имя пары напрямую из нажатой кнопки
         pair = call.data
         
-        # Убираем часики загрузки с кнопки в Телеграме
+        # Убираем часики загрузки с кнопки
         bot.answer_callback_query(call.id)
         
         # Расчет точного времени по Московскому времени (UTC+3)
         moscow_time = datetime.utcnow() + timedelta(hours=3)
         current_time = moscow_time.strftime("%H:%M:%S")
 
-        # Случайный выбор направления (ВВЕРХ или ВНИЗ)
+        # Случайный выбор направления и времени экспирации (списки заполнены!)
         direction = random.choice(["ВВЕРХ (CALL) ⬆️", "ВНИЗ (PUT) ⬇️"])
         accuracy = random.randint(86, 94)
-
-        # Выбираем случайное время экспирации (1, 2 или 3 минуты)
-        exp_min = random.choice([1, 2, 3])
+        exp_min = random.choice([1, 2, 3, 5])
         
         # Формируем красивый текст сигнала
         signal_text = (
@@ -94,8 +90,11 @@ def process_otc_signal(call):
 if __name__ == "__main__":
     Thread(target=run_web_server).start()
     
-    print("Удаление старого вебхука...")
-    bot.remove_webhook()
+    # Сброс старого вебхука для исправления ошибки 409
+    try:
+        bot.remove_webhook()
+    except Exception as e:
+        print(f"Не удалось удалить вебхук: {e}")
     
     print("Бот успешно запущен!")
     bot.infinity_polling()
