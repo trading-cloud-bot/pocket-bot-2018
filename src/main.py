@@ -76,6 +76,13 @@ def process_otc_signal(call):
     )
 
 if __name__ == "__main__":
+    # Запускаем фоновый веб-сервер
     Thread(target=run_web_server).start()
+    
+    # ФИКС ОШИБКИ 409: Удаляем старый вебхук перед запуском бота
+    print("Удаление старого вебхука...")
+    bot.remove_webhook()
+    
+    # Запуск бесконечного опроса Telegram бота
     print("Бот успешно запущен!")
     bot.infinity_polling()
